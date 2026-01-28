@@ -4,8 +4,8 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev:my-prs": "bun run --watch src/my-prs.ts",
-		"build:my-prs": "bun build src/my-prs.ts --target=bun --outfile out/my-prs --compile --bytecode",
+		"dev": "bun run --watch src/my-prs.ts",
+		"build": "bun build src/my-prs.ts --target=bun --outfile out/my-prs --compile --bytecode",
 		"lint": "biome check",
 		"lint:fix": "biome check --write --unsafe",
 		"postinstall": "bunx @biomejs/biome migrate --write",
