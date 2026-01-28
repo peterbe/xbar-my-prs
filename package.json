@@ -8,11 +8,13 @@
 		"build:my-prs": "bun build src/my-prs.ts --target=bun --outfile out/my-prs --compile --bytecode",
 		"lint": "biome check",
 		"lint:fix": "biome check --write --unsafe",
-		"postinstall": "bunx @biomejs/biome migrate --write"
+		"postinstall": "bunx @biomejs/biome migrate --write",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"husky": "^9.1.7"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
