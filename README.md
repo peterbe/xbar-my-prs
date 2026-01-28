@@ -1,4 +1,18 @@
-# xbars
+# xbar-my-prs
+
+## What this is
+
+[xbar](https://xbarapp.com/) ([GitHub repo here](https://github.com/matryer/xbar))
+is a macOS app:
+
+> Put the output from any script or program into your macOS Menu Bar
+
+Once installed you put executable scripts that prints something that then shows
+up in your menu bar. This repo is for one of those scripts. It prints information
+about your active GitHub Pull Requests.
+
+![Screenshot showing 2 PRs](./screenshot.png)
+
 
 ## To configure
 
