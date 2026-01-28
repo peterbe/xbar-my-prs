@@ -22,7 +22,13 @@ Put it into a file called `~/.xbar-github.json` along with your username.
 It should look like this:
 
 ```json
-{ "token": "ghp_6BtFad8kFfKWTQgw0000000000000000000000", "username": "peterbe" }
+{ "token": "ghp_6BtFad8kFfKWTQgw0000000000000000000000" }
+```
+
+## To set up
+
+```bash
+just install
 ```
 
 ## To build

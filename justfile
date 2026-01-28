@@ -1,6 +1,9 @@
 # https://github.com/casey/just
 # https://just.systems/
 
+install:
+    bun install
+
 dev:
     bun run dev:my-prs
 
