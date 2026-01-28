@@ -1,0 +1,4 @@
+#!/bin/bash
+# bun test
+bun run lint:fix
+git update-index --again
