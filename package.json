@@ -1,0 +1,26 @@
+{
+	"name": "xbars",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev:my-prs": "bun run --watch src/my-prs.ts",
+		"build:my-prs": "bun build src/my-prs.ts --target=bun --outfile out/my-prs --compile --bytecode",
+		"lint": "biome check",
+		"lint:fix": "biome check --write --unsafe",
+		"postinstall": "bunx @biomejs/biome migrate --write"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.11",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@donedeal0/superdiff": "^4.0.0",
+		"commander": "^14.0.2",
+		"date-fns": "^4.1.0",
+		"octokit": "^5.0.5"
+	}
+}
