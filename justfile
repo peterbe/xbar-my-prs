@@ -1,11 +1,14 @@
 # https://github.com/casey/just
 # https://just.systems/
 
+install:
+    bun install
+
 dev:
-    bun run dev:my-prs
+    bun run dev
 
 build:
-    bun run build:my-prs
+    bun run build
 
 run: build
     out/my-prs

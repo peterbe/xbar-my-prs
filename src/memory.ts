@@ -41,12 +41,6 @@ export function comparePrInfoGroups(
 					);
 					// console.log({ status }, recentlyRemovedOrAdded, "???");
 				}
-
-				// if (status !== "closed") {
-				// 	alerts.push(
-				// 		`No longer open: ${recentlyRemovedOrAdded.map((pr) => `"${pr.title}"`).join(", ")}`,
-				// 	);
-				// }
 			} else {
 				groups[status].forEach((pr, index) => {
 					const prBefore = groupsBefore[status][index];
@@ -58,6 +52,34 @@ export function comparePrInfoGroups(
 								...compareReviews(pr, value as PrReviewInfo[], prBefore[key]),
 							);
 						}
+						if (key === "labels") {
+							const names = new Set(pr.labels.map((label) => label.name));
+							const beforeValue = prBefore.labels;
+							const namesBefore = new Set(
+								beforeValue.map((label) => label.name),
+							);
+							if (areSetsEqual(names, namesBefore)) {
+								continue;
+							}
+
+							const newLabels = [...names].filter((n) => !namesBefore.has(n));
+							const removedLabels = [...namesBefore].filter(
+								(n) => !names.has(n),
+							);
+							if (newLabels.length > 0 && removedLabels.length > 0) {
+								alerts.push(
+									`PR "${shortTitle(pr.title)}" new label${newLabels.length > 1 ? "s" : ""}: ${newLabels.join(", ")} and removed label${removedLabels.length > 1 ? "s" : ""}: ${removedLabels.join(", ")}`,
+								);
+							} else if (newLabels.length > 0) {
+								alerts.push(
+									`PR "${shortTitle(pr.title)}" new label${newLabels.length > 1 ? "s" : ""}: ${newLabels.join(", ")}`,
+								);
+							} else if (removedLabels.length > 0) {
+								alerts.push(
+									`PR "${shortTitle(pr.title)}" removed label${removedLabels.length > 1 ? "s" : ""}: ${removedLabels.join(", ")}`,
+								);
+							}
+						}
 						if (Array.isArray(value)) continue;
 
 						if (typeof value === "string" && key in prBefore) {
@@ -67,8 +89,12 @@ export function comparePrInfoGroups(
 							if (value !== beforeValue) {
 								if (key === "updated_at") {
 									alerts.push(`PR "${shortTitle(pr.title)}" updated`);
+								} else if (key === "body") {
+									alerts.push(
+										`PR "${shortTitle(pr.title)}" description changed`,
+									);
 								} else {
-									console.log({ key, value, beforeValue });
+									// console.log({ key, value, beforeValue });
 									alerts.push(
 										`PR "${shortTitle(pr.title)}" changed ${key} from "${beforeValue}" to "${value}"`,
 									);
@@ -82,6 +108,25 @@ export function comparePrInfoGroups(
 	}
 
 	return alerts;
+}
+
+function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
+	// Check if the sizes are different; if so, the sets are not equal.
+	if (set1.size !== set2.size) {
+		return false;
+	}
+
+	// Iterate over the elements of one set and check if every element
+	// is present in the second set using the Set.prototype.has() method.
+	// The Array.prototype.every() method stops as soon as a false condition is found.
+	for (const value of set1) {
+		if (!set2.has(value)) {
+			return false;
+		}
+	}
+
+	// If the loop completes without returning false, the sets are equal.
+	return true;
 }
 
 function compareReviews(

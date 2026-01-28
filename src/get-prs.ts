@@ -10,6 +10,7 @@ export type PrReviewInfo = {
 
 export type PrInfo = {
 	title: string;
+	body: string;
 	state: string;
 	url: string;
 	draft?: boolean;
@@ -21,6 +22,9 @@ export type PrInfo = {
 	number_of_comments: number;
 	org: string;
 	repo: string;
+	labels: {
+		name: string;
+	}[];
 };
 
 export type PrInfoGroups = Record<"open" | "closed", PrInfo[]>;
@@ -28,11 +32,13 @@ export type PrInfoGroups = Record<"open" | "closed", PrInfo[]>;
 export async function getPrs(): Promise<PrInfoGroups> {
 	const octokit = await getOctokit();
 
-	const { username } = await getGlobalConfig();
-	const openPrs = await getOpenPRsByAuthorSearch(octokit, username, {
+	const prs = await getOpenPRsByAuthorSearch(octokit, {
 		sort: "updated",
+		// This omits really old ones
 		maxSecondsAgo: 30 * 24 * 60 * 60, // 1 month ago minimum
 	});
+	const openPrs = prs.filter((pr) => pr.state === "open");
+
 	const reviews = await Promise.all(
 		openPrs.map((pr) => {
 			return getPullRequestReviews(octokit, pr.org, pr.repo, pr.pull_number);
@@ -51,16 +57,16 @@ export async function getPrs(): Promise<PrInfoGroups> {
 			});
 		}
 	});
-
-	const recentlyClosedPrs = await getOpenPRsByAuthorSearch(octokit, username, {
-		sort: "updated",
-		maxSecondsAgo: 30 * 60,
-		state: "closed",
-	});
+	const recentlyClosedPrs = prs
+		.filter((pr) => pr.state === "closed")
+		.filter((pr) => {
+			// Closed within the last 7 days
+			return pr.updated_at_ago_seconds < 30 * 60;
+		});
 
 	return {
 		open: openPrs,
-		closed: recentlyClosedPrs.map((pr) => ({ ...pr, reviews: [] })),
+		closed: recentlyClosedPrs,
 	};
 }
 
@@ -95,14 +101,9 @@ type SearchOptions = {
  */
 export async function getOpenPRsByAuthorSearch(
 	octokit: Octokit,
-	author: string,
 	options: SearchOptions = {},
 ): Promise<PrInfo[]> {
-	const qualifiers = [
-		"is:pr",
-		`is:${options.state || "open"}`,
-		`author:${author}`,
-	];
+	const qualifiers = ["is:pr", `author:@me`];
 
 	if (options.org) {
 		qualifiers.push(`org:${options.org}`);
@@ -122,6 +123,7 @@ export async function getOpenPRsByAuthorSearch(
 		console.log(response.data);
 		console.warn("Warning: The search results may be incomplete.");
 	}
+	// console.log(response.data.items[0]);
 	const found = response.data.items
 		.map((item) => {
 			const updatedAt = new Date(item.updated_at);
@@ -134,7 +136,9 @@ export async function getOpenPRsByAuthorSearch(
 			const info: PrInfo = {
 				pull_number: item.number,
 				number_of_comments: item.comments,
+
 				title: item.title,
+				body: item.body || "",
 				url: item.html_url,
 				state: item.state,
 				draft: item.draft,
@@ -145,6 +149,7 @@ export async function getOpenPRsByAuthorSearch(
 				}),
 				org,
 				repo,
+				labels: item.labels as { name: string }[],
 				reviews: [],
 			};
 			return info;
@@ -171,25 +176,4 @@ async function getPullRequestReviews(
 		pull_number,
 	});
 	return reviews;
-
-	// console.log(`Reviews for pull request #${pull_number}:`);
-	// reviews.forEach((review) => {
-	// 	console.log(
-	// 		`- Review by: ${review.user.login}, State: ${review.state}, Body: ${review.body}`,
-	// 	);
-	// });
-
-	// // To get a complete list of reviewers (both submitted and requested),
-	// // you might also want to list requested reviewers
-	// const { data: requestedReviewers } =
-	// 	await octokit.rest.pulls.listRequestedReviewers({
-	// 		owner,
-	// 		repo,
-	// 		pull_number,
-	// 	});
-
-	// console.log(`\nRequested reviewers for pull request #${pull_number}:`);
-	// requestedReviewers.forEach((reviewer) => {
-	// 	console.log(`- Requested reviewer: ${reviewer.login}`);
-	// });
 }

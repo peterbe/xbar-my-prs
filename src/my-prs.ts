@@ -1,13 +1,10 @@
 import { Command } from "commander";
-import { getGlobalConfig } from "./config";
 import { getPrs, type PrInfo, type PrInfoGroups } from "./get-prs";
 import { comparePrInfoGroups, getPrsBefore, savePrs } from "./memory";
 
 const program = new Command();
 
 program.action(async () => {
-	const { username } = await getGlobalConfig();
-
 	const groups = await getPrs();
 
 	const groupsBefore = await getPrsBefore();
@@ -40,7 +37,7 @@ program.action(async () => {
 		title += `, ${groups.closed.length} Recently Closed`;
 	}
 
-	output({ title, groups, alerts, username });
+	output({ title, groups, alerts });
 
 	await savePrs(groups);
 });
@@ -53,12 +50,10 @@ function output({
 	title,
 	groups,
 	alerts,
-	username,
 }: {
 	title: string;
 	groups: PrInfoGroups;
 	alerts: string[];
-	username: string;
 }) {
 	for (const alert of alerts) {
 		console.log(`🎵 ${alert}`);
@@ -86,7 +81,7 @@ function output({
 
 	// console.log("----"); // CREATES A NEW SUBM MENU
 	console.log("---");
-	console.log(`All Your Pull Requests | href=${allSearchURL(username)}`);
+	console.log(`All Your Pull Requests | href=${allSearchURL()}`);
 }
 
 function printPrInfo(pr: PrInfo) {
@@ -139,9 +134,9 @@ function printPrInfo(pr: PrInfo) {
 	// }
 }
 
-function allSearchURL(username: string) {
+function allSearchURL() {
 	const sp = new URLSearchParams({
-		q: `is:pr is:open author:${username} sort:updated `,
+		q: "is:pr is:open author:@me sort:updated",
 		type: "pullrequests",
 	});
 	return `https://github.com/search?${sp.toString()}`;
