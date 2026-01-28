@@ -17,3 +17,6 @@ lintfix:
     bun run lint:fix
 
 format: lintfix
+
+upgrade:
+    bun update --interactive
