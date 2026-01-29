@@ -1,45 +1,61 @@
+import { styleText } from "node:util";
 import { Command } from "commander";
-import { getPrs, type PrInfo, type PrInfoGroups } from "./get-prs";
+import {
+	getPrs,
+	type PrInfo,
+	type PrInfoGroups,
+	TimeoutError,
+} from "./get-prs";
 import { comparePrInfoGroups, getPrsBefore, savePrs } from "./memory";
+
+const isTTY = !!process.stdout.isTTY;
 
 const program = new Command();
 
 program.action(async () => {
-	const groups = await getPrs();
+	try {
+		const groups = await getPrs();
 
-	const groupsBefore = await getPrsBefore();
+		const groupsBefore = await getPrsBefore();
 
-	const alerts: string[] = [];
-	if (groupsBefore) {
-		alerts.push(...comparePrInfoGroups(groups, groupsBefore));
-	}
-
-	let title = "";
-	if (groups.open.length === 1) {
-		const drafts = groups.open.some((pr) => pr.draft);
-		if (drafts) {
-			title = "1 PR";
-		} else {
-			title = "1 Open PR";
+		const alerts: string[] = [];
+		if (groupsBefore) {
+			alerts.push(...comparePrInfoGroups(groups, groupsBefore));
 		}
-	} else if (!groups.open.length) {
-		title = "No PRs";
-	} else {
-		const drafts = groups.open.some((pr) => pr.draft);
-		if (drafts) {
-			title = `${groups.open.length} PRs`;
+
+		let title = "";
+		if (groups.open.length === 1) {
+			const drafts = groups.open.some((pr) => pr.draft);
+			if (drafts) {
+				title = "1 PR";
+			} else {
+				title = "1 Open PR";
+			}
+		} else if (!groups.open.length) {
+			title = "No PRs";
 		} else {
-			title = `${groups.open.length} Open PRs`;
+			const drafts = groups.open.some((pr) => pr.draft);
+			if (drafts) {
+				title = `${groups.open.length} PRs`;
+			} else {
+				title = `${groups.open.length} Open PRs`;
+			}
+		}
+
+		if (groups.closed.length > 0) {
+			title += `, ${groups.closed.length} Recently Closed`;
+		}
+
+		output({ title, groups, alerts });
+
+		await savePrs(groups);
+	} catch (error) {
+		if (error instanceof Error && error instanceof TimeoutError) {
+			outputError({ msg: "timed out" });
+		} else {
+			throw error;
 		}
 	}
-
-	if (groups.closed.length > 0) {
-		title += `, ${groups.closed.length} Recently Closed`;
-	}
-
-	output({ title, groups, alerts });
-
-	await savePrs(groups);
 });
 
 program.parse();
@@ -82,6 +98,22 @@ function output({
 	// console.log("----"); // CREATES A NEW SUBM MENU
 	console.log("---");
 	console.log(`All Your Pull Requests | href=${allSearchURL()}`);
+}
+
+function outputError({ msg }: { msg: string }) {
+	console.log(colorize(`My PRs failed (${msg})`, "orange"));
+}
+
+function colorize(msg: string | string[], color: "green" | "orange") {
+	const combined = Array.isArray(msg) ? msg.map(String).join(" ") : msg;
+	if (isTTY) {
+		// debugging in your terminal or something
+		const recognizedColor = color === "orange" ? "yellow" : color;
+		return styleText(recognizedColor, combined);
+	} else {
+		// actually in xbar
+		return `${combined} | color=${color}`;
+	}
 }
 
 function printPrInfo(pr: PrInfo) {

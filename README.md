@@ -13,7 +13,6 @@ about your active GitHub Pull Requests.
 
 ![Screenshot showing 2 PRs](./screenshot.png)
 
-
 ## To configure
 
 Create a GitHub Personal Access Token that has access to the repos
