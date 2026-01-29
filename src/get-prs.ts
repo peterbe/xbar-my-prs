@@ -64,8 +64,8 @@ export async function getPrs(): Promise<PrInfoGroups> {
 	const recentlyClosedPrs = prs
 		.filter((pr) => pr.state === "closed")
 		.filter((pr) => {
-			// Closed within the last 7 days
-			return pr.updated_at_ago_seconds < 30 * 60;
+			// Closed within the last 5 minutes
+			return pr.updated_at_ago_seconds < 5 * 60;
 		});
 
 	return {

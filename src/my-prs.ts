@@ -41,7 +41,6 @@ program.action(async () => {
 				title = `${groups.open.length} Open PRs`;
 			}
 		}
-
 		if (groups.closed.length > 0) {
 			title += `, ${groups.closed.length} Recently Closed`;
 		}
