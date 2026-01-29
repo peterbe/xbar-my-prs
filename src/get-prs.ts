@@ -2,6 +2,10 @@ import { formatDistance } from "date-fns/formatDistance";
 import { Octokit } from "octokit";
 import { getGlobalConfig } from "./config";
 
+const DEFAULT_TIMEOUT = 5000;
+
+export class TimeoutError extends Error {}
+
 export type PrReviewInfo = {
 	reviewer: string;
 	state: string;
@@ -102,6 +106,7 @@ type SearchOptions = {
 export async function getOpenPRsByAuthorSearch(
 	octokit: Octokit,
 	options: SearchOptions = {},
+	timeout: number = DEFAULT_TIMEOUT,
 ): Promise<PrInfo[]> {
 	const qualifiers = ["is:pr", `author:@me`];
 
@@ -117,51 +122,70 @@ export async function getOpenPRsByAuthorSearch(
 		qualifiers.push(`updated:>=${isoDate}`);
 	}
 
+	const controller = new AbortController();
+	const signal = controller.signal;
+	const timeoutId = setTimeout(() => {
+		controller.abort();
+	}, timeout);
+
 	const q = qualifiers.join(" ");
-	const response = await octokit.request("GET /search/issues", { q });
-	if (response.data.incomplete_results) {
-		console.log(response.data);
-		console.warn("Warning: The search results may be incomplete.");
+	try {
+		const response = await octokit.request("GET /search/issues", {
+			q,
+			request: {
+				signal,
+			},
+		});
+		clearTimeout(timeoutId);
+		if (response.data.incomplete_results) {
+			console.log(response.data);
+			console.warn("Warning: The search results may be incomplete.");
+		}
+		// console.log(response.data.items[0]);
+		const found = response.data.items
+			.map((item) => {
+				const updatedAt = new Date(item.updated_at);
+
+				const url = new URL(item.html_url);
+				const [, org, repo] = url.pathname.split("/");
+				if (!org) throw new Error("Could not parse org from PR URL");
+				if (!repo) throw new Error("Could not parse repo from PR URL");
+
+				const info: PrInfo = {
+					pull_number: item.number,
+					number_of_comments: item.comments,
+
+					title: item.title,
+					body: item.body || "",
+					url: item.html_url,
+					state: item.state,
+					draft: item.draft,
+					updated_at_ago_seconds: (Date.now() - updatedAt.getTime()) / 1000,
+					updated_at: item.updated_at,
+					updated_at_human: formatDistance(updatedAt, new Date(), {
+						addSuffix: true,
+					}),
+					org,
+					repo,
+					labels: item.labels as { name: string }[],
+					reviews: [],
+				};
+				return info;
+			})
+			.filter((pr) => {
+				if (!options.maxSecondsAgo) return true;
+
+				return pr.updated_at_ago_seconds < options.maxSecondsAgo;
+			})
+			.sort((a, b) => a.updated_at_ago_seconds - b.updated_at_ago_seconds);
+
+		return found;
+	} catch (error) {
+		if (error instanceof Error && error.name === "AbortError") {
+			throw new TimeoutError(`Timed out after ${timeout}ms`);
+		}
+		throw error;
 	}
-	// console.log(response.data.items[0]);
-	const found = response.data.items
-		.map((item) => {
-			const updatedAt = new Date(item.updated_at);
-
-			const url = new URL(item.html_url);
-			const [, org, repo] = url.pathname.split("/");
-			if (!org) throw new Error("Could not parse org from PR URL");
-			if (!repo) throw new Error("Could not parse repo from PR URL");
-
-			const info: PrInfo = {
-				pull_number: item.number,
-				number_of_comments: item.comments,
-
-				title: item.title,
-				body: item.body || "",
-				url: item.html_url,
-				state: item.state,
-				draft: item.draft,
-				updated_at_ago_seconds: (Date.now() - updatedAt.getTime()) / 1000,
-				updated_at: item.updated_at,
-				updated_at_human: formatDistance(updatedAt, new Date(), {
-					addSuffix: true,
-				}),
-				org,
-				repo,
-				labels: item.labels as { name: string }[],
-				reviews: [],
-			};
-			return info;
-		})
-		.filter((pr) => {
-			if (!options.maxSecondsAgo) return true;
-
-			return pr.updated_at_ago_seconds < options.maxSecondsAgo;
-		})
-		.sort((a, b) => a.updated_at_ago_seconds - b.updated_at_ago_seconds);
-
-	return found;
 }
 
 async function getPullRequestReviews(
