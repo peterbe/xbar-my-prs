@@ -11,6 +11,12 @@ Once installed you put executable scripts that prints something that then shows
 up in your menu bar. This repo is for one of those scripts. It prints information
 about your active GitHub Pull Requests.
 
+## Business logic
+
+Using the repositories your personal access token can reach, it pulls all
+pull requests that you are the author of, sorted by updated time. Of those,
+it excludes closed pull requests that were closed longer than 5 minutes ago.
+
 ![Screenshot showing 2 PRs](./screenshot.png)
 
 ## To configure
