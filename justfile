@@ -22,4 +22,4 @@ lintfix:
 format: lintfix
 
 upgrade:
-    bun update --interactive
+    bun update --interactive --minimum-release-age=86400 && bun install
